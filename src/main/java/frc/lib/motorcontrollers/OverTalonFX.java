@@ -2,10 +2,11 @@ package frc.lib.motorcontrollers;
 
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.*;
+
+import frc.lib.enums.NeutralMode.ControllerNeutralMode;
+
 import com.ctre.phoenix6.configs.*;
 import com.ctre.phoenix6.controls.*;
-
-import frc.lib.motorcontrollers.NeutralMode.ControllerNeutralMode;
 
 public class OverTalonFX extends TalonFX {
 

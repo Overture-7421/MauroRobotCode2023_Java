@@ -1,7 +1,7 @@
-package frc.lib.motorcontrollers;
+package frc.lib.enums;
 
 public class NeutralMode {
-    public enum ControllerNeutralMode {
+    public static enum ControllerNeutralMode {
         /**
          * Use the Brake NeutralMode
          */
