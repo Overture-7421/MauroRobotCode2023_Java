@@ -117,14 +117,11 @@ public class SwerveModule extends SubsystemBase {
     useRawVoltageSpeed = set;
   };
 
-  public SwerveModule setVoltages() {
+  public void setVoltages() {
     m_turningMotor.setPositionVoltage(m_state.angle.getDegrees() / 360.0, false);
 
-    if (useRawVoltageSpeed) {
-      m_driveMotor.setVoltage(wheelVoltage, true);
-    } else {
-      m_driveMotor.setVoltage(m_wheelDiameter, useRawVoltageSpeed);
-    }
+      m_driveMotor.setVoltage(setSpeed(m_wheelDiamete r), true);
+    
   }
 
   @Override
