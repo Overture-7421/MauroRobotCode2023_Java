@@ -2,11 +2,10 @@ package frc.lib.motorcontrollers;
 
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.*;
-
-import frc.lib.enums.NeutralMode.ControllerNeutralMode;
-
 import com.ctre.phoenix6.configs.*;
 import com.ctre.phoenix6.controls.*;
+
+import frc.lib.enums.NeutralMode.ControllerNeutralMode;
 
 public class OverTalonFX extends TalonFX {
 
@@ -20,7 +19,7 @@ public class OverTalonFX extends TalonFX {
      * @param inverted    Whether or not the TalonFX is inverted
      * @param bus         The bus of the TalonFX
      */
-    public OverTalonFX(int id, ControllerNeutralMode neutralMode, boolean inverted, double getRatio, String bus) {
+    public OverTalonFX(int id, ControllerNeutralMode neutralMode, boolean inverted, String bus) {
         super(id, bus);
 
         setNeutralMode(neutralMode);
@@ -60,7 +59,7 @@ public class OverTalonFX extends TalonFX {
      * 
      * @param gearRatio The gear ratio of the TalonFX
      */
-    public void setSensorToMechanismRatio(double gearRatio) {
+    public void setSensorToMechanism(double gearRatio) {
         config.Feedback.SensorToMechanismRatio = gearRatio;
         getConfigurator().apply(config);
     }
@@ -128,7 +127,7 @@ public class OverTalonFX extends TalonFX {
      */
     public void SetSupplyCurrentLimit(boolean enable, double currentLimit, double triggerThresholdCurrent,
             double triggerThresholdTime) {
-        config.CurrentLimits.SupplyCurrentLimitEnable = enable;
+        config.CurrentLimits.StatorCurrentLimitEnable = enable;
         config.CurrentLimits.SupplyCurrentLimit = currentLimit;
         config.CurrentLimits.SupplyCurrentThreshold = triggerThresholdCurrent;
         config.CurrentLimits.SupplyTimeThreshold = triggerThresholdTime;
@@ -142,9 +141,9 @@ public class OverTalonFX extends TalonFX {
      * @param peakBackward The peak reverse voltage of the TalonFX
      * @param deadband     The deadband of the TalonFX
      */
-    public void setTorqueCurrentLimit(double peakForward, double peakBackward, double deadband) {
-        config.TorqueCurrent.PeakForwardTorqueCurrent = peakForward;
-        config.TorqueCurrent.PeakReverseTorqueCurrent = peakBackward;
+    public void setTorqueCurrentLimit(double peakForwardVoltage, double peakReverseVoltage, double deadband) {
+        config.TorqueCurrent.PeakForwardTorqueCurrent = peakForwardVoltage;
+        config.TorqueCurrent.PeakReverseTorqueCurrent = peakReverseVoltage;
         config.TorqueCurrent.TorqueNeutralDeadband = deadband;
         getConfigurator().apply(config);
 
@@ -287,7 +286,7 @@ public class OverTalonFX extends TalonFX {
      * @param enableFOC   Whether or not to enable FOC
      */
     public void setMotionMagicPosition(double position, double feedForward, boolean enableFOC) {
-        MotionMagicVoltage motionMagicVoltage = new MotionMagicVoltage(0);
+        MotionMagicVoltage motionMagicVoltage = new MotionMagicVoltage(0).withSlot(0);
         motionMagicVoltage.FeedForward = feedForward;
         motionMagicVoltage.EnableFOC = enableFOC;
         setControl(motionMagicVoltage.withPosition(position));
@@ -299,7 +298,7 @@ public class OverTalonFX extends TalonFX {
      * @param velocity The velocity to set the TalonFX to
      */
     public void setVelocityTorqueCurrentFOC(double velocity) {
-        VelocityTorqueCurrentFOC velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
+        VelocityTorqueCurrentFOC velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0).withSlot(0);
         setControl(velocityTorqueCurrentFOC.withVelocity(velocity));
     }
 
@@ -335,7 +334,6 @@ public class OverTalonFX extends TalonFX {
         motionMagicConfigs.MotionMagicCruiseVelocity = cruiseVelocity;
         motionMagicConfigs.MotionMagicAcceleration = acceleration;
         motionMagicConfigs.MotionMagicJerk = jerk;
-
         getConfigurator().apply(motionMagicConfigs);
     }
 

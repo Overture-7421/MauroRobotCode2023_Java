@@ -9,29 +9,32 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+//import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
+import frc.lib.enums.NeutralMode.ControllerNeutralMode;
 import frc.lib.motorcontrollers.OverTalonFX;
 import frc.lib.sensors.OverCANCoder;
 
 public class SwerveModule extends SubsystemBase {
 
-  OverTalonFX m_driveMotor;
-  OverTalonFX m_turningMotor;
-  OverCANCoder m_CanCoder;
+  private OverTalonFX m_driveMotor;
+  private OverTalonFX m_turningMotor;
+  private OverCANCoder m_CanCoder;
 
-  SimpleMotorFeedforward m_feedForward;
+  private SimpleMotorFeedforward m_FeedForward;
 
-  SwerveModuleState m_state;
+  private SwerveModuleState m_State = new SwerveModuleState();
 
-  double m_wheelDiameter = 1;
+  private double m_wheelDiameter = 1;
+  private double m_driveMotorGearRatio = 1;
+  private double m_turningMotorGearRatio = 1;
 
-  boolean useRawVoltageSpeed = false;
+  private String m_name;
 
   /** Creates a new SwerveModule. */
   public SwerveModule(int rotatorID, int wheelID, int canCoderID, double offset, String moduleName, String canBus) {
-    m_driveMotor = new OverTalonFX(canCoderID, null, false, offset, canBus);
-    m_turningMotor = new OverTalonFX(canCoderID, null, false, offset, canBus);
+    m_driveMotor = new OverTalonFX(wheelID, ControllerNeutralMode.BRAKE, true, canBus);
+    m_turningMotor = new OverTalonFX(rotatorID, ControllerNeutralMode.BRAKE, true, canBus);
     m_CanCoder = new OverCANCoder(canCoderID, offset, canBus);
 
     m_turningMotor.setContinousWrap();
@@ -43,6 +46,13 @@ public class SwerveModule extends SubsystemBase {
     m_driveMotor.zeroPosition();
     m_driveMotor.setClosedLoopVoltageRamp(0.1);
     m_driveMotor.SetSupplyCurrentLimit(true, 20, 30, 0.5);
+
+    m_name = moduleName;
+    m_name = m_name.trim();
+  }
+
+  public SimpleMotorFeedforward get_FeedForward() {
+    return m_FeedForward;
   }
 
   public void setRotatorPIDValues(double kP, double kI, double kD) {
@@ -55,12 +65,14 @@ public class SwerveModule extends SubsystemBase {
   };
 
   public void setFFConstants(double ks, double kv, double ka) {
-    m_feedForward = new SimpleMotorFeedforward(ks, kv, ka);
+    m_FeedForward = new SimpleMotorFeedforward(ks, kv, ka);
   }
 
   public void setGearRatio(double turn, double wheel) {
-    m_turningMotor.setRotorToSensorRatio(turn);
-    m_driveMotor.setSensorToMechanismRatio(wheel);
+    m_turningMotorGearRatio = turn;
+    m_driveMotorGearRatio = wheel;
+    m_turningMotor.setRotorToSensorRatio(m_turningMotorGearRatio);
+    m_driveMotor.setRotorToSensorRatio(m_driveMotorGearRatio);
   }
 
   public void setWheelDiameter(double wheelDiameter) {
@@ -68,64 +80,55 @@ public class SwerveModule extends SubsystemBase {
   }
 
   public double getSpeed() {
-    return m_driveMotor.getVelocity(m_wheelDiameter);
+    return m_driveMotor.getVelocity(m_wheelDiameter, m_driveMotorGearRatio);
   }
 
   public double setSpeed(double speed) {
-    return (speed / ((m_wheelDiameter * Math.PI)));
+    return ((speed / (m_wheelDiameter * Math.PI)));
   }
 
   public double getDistance() {
-    return m_driveMotor.getDistance(m_wheelDiameter);
+    return m_driveMotor.getDistance(m_wheelDiameter, m_driveMotorGearRatio);
   }
 
   public double getAngle() {
-    return m_CanCoder.getSensorAbsolutePosition() * 360.0;
+    return m_CanCoder.getSensorAbsolutePosition();
+
   }
 
   public SwerveModuleState getState() {
-    SwerveModuleState state = new SwerveModuleState();
+    SwerveModuleState state = new SwerveModuleState(getSpeed(), Rotation2d.fromDegrees(getAngle()));
 
-    state.speedMetersPerSecond = getSpeed();
-    state.angle = Rotation2d.fromDegrees(getAngle());
+    // state.speedMetersPerSecond = getSpeed();
+    // state.angle = Rotation2d.fromDegrees(getAngle());
 
     return state;
   };
 
   public void setState(SwerveModuleState state) {
-    m_state = SwerveModuleState.optimize(state, m_state.angle);
+    m_State = SwerveModuleState.optimize(state, Rotation2d.fromDegrees(getAngle()));
   };
 
   public SwerveModulePosition getPosition() {
-    SwerveModulePosition state = new SwerveModulePosition();
-    // double meter_t = getDistance();
-    // double degree_t = getAngle();
-    state.angle = Rotation2d.fromDegrees(getAngle());
-    state.distanceMeters = getDistance();
-    // SwerveModulePosition position = new getDistance(), getAngle();
+    SwerveModulePosition position = new SwerveModulePosition();
 
-    return state;
-  };
+    position.angle = Rotation2d.fromDegrees(getAngle());
+    position.distanceMeters = getDistance();
 
-  public SwerveModule setWheelVoltage(double wheelVoltage) {
-    SwerveModule state = new SwerveModule(0, 0, 0, wheelVoltage, getSubsystem(), getName());
-    state.setWheelVoltage(wheelVoltage);
-    return state;
-  };
-
-  public void setUseRawVoltageSpeed(boolean set) {
-    useRawVoltageSpeed = set;
+    return position;
   };
 
   public void setVoltages() {
-    m_turningMotor.setPositionVoltage(m_state.angle.getDegrees() / 360.0, false);
+    m_turningMotor.setPositionVoltage(m_State.angle.getDegrees() / 360.0, false);
 
-      m_driveMotor.setVoltage(setSpeed(m_wheelDiamete r), true);
-    
+    m_driveMotor.setVoltage(setSpeed(m_State.speedMetersPerSecond), false);
+
   }
 
   @Override
   public void periodic() {
-    // This method will be called once per scheduler run
+    // SmartDashboard.putNumber(m_name + "/Speed", getSpeed());
+    // SmartDashboard.putNumber(m_name + "/Target", m_State.angle.getDegrees());
+    // SmartDashboard.putNumber(m_name + "/Angle", getAngle());
   }
 }
