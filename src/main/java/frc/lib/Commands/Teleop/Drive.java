@@ -4,71 +4,83 @@
 
 package frc.lib.Commands.Teleop;
 
-import edu.wpi.first.wpilibj2.command.CommandBase;
-import edu.wpi.first.wpilibj2.command.CommandHelper;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.math.util.Units;
 
-import frc.lib.subsystems.SwerveChassis;
 import frc.lib.math.Utils;
+import frc.lib.subsystems.SwerveChassis;
 
-public class Drive extends CommandBase {
+public class Drive extends Command {
+  
+  private SwerveChassis m_swerveChassis;
+  private XboxController m_controller;
+
+  /* Speed Constants*/
+  double kMaxSpeed = 5.0; // meters per second
+  double kMaxAngularSpeed = 4.0; // radians per second
+
+  /* Constant */
+  double maxAcceleration = 12; // meters per second squared
+  double maxRotation = 9; // radians per second squared
+
+  /* Limiters */
+  SlewRateLimiter xLimiter = new SlewRateLimiter(maxAcceleration);
+  SlewRateLimiter yLimiter = new SlewRateLimiter(maxAcceleration);
+  SlewRateLimiter rLimiter = new SlewRateLimiter(maxRotation);
+
   /** Creates a new Drive. */
-  public Drive(SwerveChassis swerveChassis, XboxController controller) : m_swerveChassis(swerveChassis), joystick(controller){
-    AddRequirements(m_swerveChassis);
+  public Drive(SwerveChassis swerveChassis, XboxController controller) {
+    this.m_swerveChassis = swerveChassis;
+    this.m_controller = controller;
+    
+    addRequirements(m_swerveChassis);
   }
 
+  // Called when the command is initially scheduled.
   @Override
-  public void initialize() {}
+  public void initialize() {
+  }
 
+  // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    if (joystick.GetRightBumper()) {
+    if (m_controller.getRightBumper()) {
       kMaxSpeed = 2;
-      kMaxAngularSpeed = 3.5;
+      kMaxAngularSpeed = 2;
+      // maxAcceleration = 2.5;
+      // maxRotation = 6.33;
     } else {
       kMaxSpeed = 5.0;
-      kMaxAngularSpeed = 9.0;
+      kMaxAngularSpeed = 4.0;
+      // maxAcceleration = 12.0;
+      // maxRotation = 16.0;
     }
 
-    meters_per_second_t xInput = Utils.applyAxisFilter(-joystick.GetLeftY())*kMaxSpeed;
-    meters_per_second_t yInput = Utils.applyAxisFilter(-joystick.GetLeftX())*kMaxSpeed;
-    radians_per_second_t rInput = Utils.applyAxisFilter(-joystick.GetRightX())*kMaxAngularSpeed;
+    double xInput = Utils.applyAxisFilter(-m_controller.getLeftY()) * kMaxSpeed; // Meter per second
+    double yInput = Utils.applyAxisFilter(m_controller.getLeftX()) * kMaxSpeed; // Meter per second
+    double rInput = Utils.applyAxisFilter(m_controller.getRightX()) * kMaxAngularSpeed; // Radians per second
 
-    ChassisSpeeds chassisSpeeds = FromFieldRelativeSpeeds(
-      xLimiter.Calculate(xInput),
-      yLimiter.Calculate(yInput),
-      rLimiter.Calculate(rInput),
-      m_swerveChassis.getOdometry(),Rotation());
+    ChassisSpeeds speeds = ChassisSpeeds.discretize(ChassisSpeeds.fromFieldRelativeSpeeds(
+      xLimiter.calculate(xInput),
+      yLimiter.calculate(yInput),
+      rLimiter.calculate(rInput),
+      m_swerveChassis.getOdometry().getRotation()),
+      0.02);
 
-    m_swerveChassis.setSpeed(chassisSpeeds);
+    m_swerveChassis.setSpeed(speeds);
   }
 
+  // Called once the command ends or is interrupted
   @Override
-  public void end(boolean interrupted) {}
+  public void end(boolean interrupted) {
+  }
 
+  // Returns true when the command should end 
   @Override
   public boolean isFinished() {
     return false;
   }
-
-  private SwerveChassis m_swerveChassis;
-
-  private double kMaxSpeed = 5.0;
-  private double kMaxAngularSpeed = 9.0;
-
-  private meters_per_second_squared_t maxAcceleration = 12;
-  private radians_per_second_squared_t maxRotation = 16;
-
-  private SlewRateLimiter<meters_per_second> xLimiter = maxAcceleration;
-  private SlewRateLimiter<meters_per_second> yLimiter = maxAcceleration;
-  private SlewRateLimiter<radians_per_second> rLimiter = maxRotation;
-
-  private XboxController joystick;
-
-
-
 
 }
