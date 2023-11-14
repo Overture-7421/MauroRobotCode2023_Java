@@ -1,229 +1,294 @@
 package frc.lib.subsystems;
 
-import com.ctre.phoenix6.Timestamp;
+//import com.ctre.phoenix6.Timestamp;
 import com.kauailabs.navx.frc.AHRS;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics. SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
+//import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import edu.wpi.first.units.Distance;
-import edu.wpi.first.units.Measure;
-import edu.wpi.first.units.Voltage;
-
-import frc.lib.subsystems.SwerveModule;
+//import frc.lib.subsystems.SwerveModule;
 
 public class SwerveChassis extends SubsystemBase {
-    // navx pendinte
 
-    private double linearX;
-    private double linearY;
-    private double angular;
+    private AHRS navx = new AHRS();
 
-    private AHRS navAhrs;
+    private SwerveModule m_frontLeftModule;
+    private SwerveModule m_frontRightModule;
+    private SwerveModule m_backLeftModule;
+    private SwerveModule m_backRightModule;
 
-    private SwerveModule frontLeftModule;
-    private SwerveModule frontRightModule;
-    private SwerveModule backLeftModule;
-    private SwerveModule backRightModule;
+    private double linearX = 0;
+    private double linearY = 0;
+    private double angular = 0;
 
-    private double wheelVoltage;
-    private double targetAngle;
+    SwerveDriveKinematics kinematics;
+    SwerveModulePosition[] odometryPos;
+    SwerveDrivePoseEstimator odometry;
 
-    private Translation2d modulePos; // Falta el 4>* pero nose si va aqui en java
-    private SwerveDriveKinematics kinematics;
-    private SwerveModulePosition odometryPos;
-    private SwerveDrivePoseEstimator odometry;
-
+    /**
+     * Creates a new SwerveChassis.
+     */
     public SwerveChassis() {
-        AHRS navAhrs;
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e){
+            e.printStackTrace();
+        }
 
-        SwerveModule frontLeftModule;
-        SwerveModule frontRightModule;
-        SwerveModule backLeftModule;
-        SwerveModule backRightModule;
+        double startTime = Timer.getFPGATimestamp();
+        while (navx.isCalibrating()){
+            double timePassed = Timer.getFPGATimestamp() - startTime;
+            if (timePassed > 10){
+                System.out.println("NavX calibration timed out");
+                break;
+            }
+            try{
+                Thread.sleep(10);
+            } catch (InterruptedException e){
+                e.printStackTrace();
+            }
+        }
 
-        double wheelVoltage;
-        double targetAngle;
-
-        Translation2d modulePos; // Falta el 4>* pero nose si va aqui en java
-        SwerveDriveKinematics kinematics;
-        SwerveModulePosition odometryPos;
-        SwerveDrivePoseEstimator odometry;
-
+        navx.zeroYaw();
+        
     }
     
-    public void setModulePositions(Translation2d, positions){
-        this.modulePos = positions;
-        setModulePositions.kinematics = SwerveDriveKinematics(modulePos);
+    /**
+     * Sets the swerve module positions for the kinematics and odometry.
+     * 
+     * @param positions
+     */
+    public void setModulePositions(Translation2d[] positions) {
+        kinematics = new SwerveDriveKinematics(positions);
     }
 
+    /**
+     * Sets the swerve modules ratios
+     * 
+     * @param turnRatio
+     * @param driveRatio
+     * @param wheelDiameter
+     */
     public void setModulesRatios(double turnRatio, double driveRatio, double wheelDiameter){
-        frontRightModule.setGearRatio(turnRatio, driveRatio);
-        frontLeftModule.setGearRatio(turnRatio, driveRatio);
-        backRightModule.setGearRatio(turnRatio, driveRatio);
-        backLeftModule.setGearRatio(turnRatio, driveRatio);
+        m_frontRightModule.setGearRatio(turnRatio, driveRatio);
+        m_frontLeftModule.setGearRatio(turnRatio, driveRatio);
+        m_backRightModule.setGearRatio(turnRatio, driveRatio);
+        m_backLeftModule.setGearRatio(turnRatio, driveRatio);
 
-        frontRightModule.setWheelDiameter(wheelDiameter);
-        frontLeftModule.setWheelDiameter(wheelDiameter);
-        backRightModule.setWheelDiameter(wheelDiameter);
-        backLeftModule.setWheelDiameter(wheelDiameter);
+        m_frontRightModule.setWheelDiameter(wheelDiameter);
+        m_frontLeftModule.setWheelDiameter(wheelDiameter);
+        m_backRightModule.setWheelDiameter(wheelDiameter);
+        m_backLeftModule.setWheelDiameter(wheelDiameter);
     };
 
     public void setModules(SwerveModule frontLeft, SwerveModule frontRight, SwerveModule backLeft, SwerveModule backRight){
-        this.frontLeftModule = frontLeft;
-        this.frontRightModule = frontRight;
-        this.backLeftModule = backLeft;
-        this. backRightModule = backRight;
+        m_frontLeftModule = frontLeft;
+        m_frontRightModule = frontRight;
+        m_backLeftModule = backLeft;
+        m_backRightModule = backRight;
         
-        odometryPos = new SwerveModulePosition[], 4> {
-            frontLeftModule.getPosition(),
-            frontRightModule.getPosition(),
-            backLeftModule.getPosition(),
-            backRightModule.getPosition()
+        odometryPos = new SwerveModulePosition[] {
+            m_frontLeftModule.getPosition(),
+            m_frontRightModule.getPosition(),
+            m_backLeftModule.getPosition(),
+            m_backRightModule.getPosition()
         };
 
-        odometry = new SwerveDrivePoseEstimator <4>{
+        odometry = new SwerveDrivePoseEstimator(
             kinematics,
-            Rotation2d{},
+            new Rotation2d(0),
             odometryPos,
-            Pose2d{}
-        };
+            new Pose2d(0, 0, new Rotation2d(0)));
     }
 
+    /**
+     * Sets each module rotator PID values
+     */
     public void setRotatorPID(double kP, double kI, double kD){
-        backRightModule.setRotatorPIDValues(kP, kI, kD);
-        backLeftModule.setRotatorPIDValues(kP, kI, kD);
-        frontRightModule.setRotatorPIDValues(kP, kI, kD);
-        frontLeftModule.setRotatorPIDValues(kP, kI, kD);
+        m_backRightModule.setRotatorPIDValues(kP, kI, kD);
+        m_backLeftModule.setRotatorPIDValues(kP, kI, kD);
+        m_frontRightModule.setRotatorPIDValues(kP, kI, kD);
+        m_frontLeftModule.setRotatorPIDValues(kP, kI, kD);
     }
 
+    /**
+     * Sets each module drive PID values
+     */
     public void setDrivePID(double kP, double kI, double kD){
-        backRightModule.setDrivePIDValues(kP, kI, kD);
-        backLeftModule.setDrivePIDValues(kP, kI, kD);
-        frontRightModule.setDrivePIDValues(kP, kI, kD);
-        frontLeftModule.setDrivePIDValues(kP, kI, kD);
+        m_backRightModule.setDrivePIDValues(kP, kI, kD);
+        m_backLeftModule.setDrivePIDValues(kP, kI, kD);
+        m_frontRightModule.setDrivePIDValues(kP, kI, kD);
+        m_frontLeftModule.setDrivePIDValues(kP, kI, kD);
     }
 
-    public void setFeedForward(Voltage kS, Voltage kV, Voltage kA){
-        backRightModule.setFFConstants(kS, kV, kA);
-        backLeftModule.setFFConstants(kS, kV, kA);
-        frontRightModule.setFFConstants(kS, kV, kA);
-        frontLeftModule.setFFConstants(kS, kV, kA);
+    /**
+     * Sets the modules feedforward values
+     */
+    public void setFeedForward(double kS, double kV, double kA){
+        m_backRightModule.setFFConstants(kS, kV, kA);
+        m_backLeftModule.setFFConstants(kS, kV, kA);
+        m_frontRightModule.setFFConstants(kS, kV, kA);
+        m_frontLeftModule.setFFConstants(kS, kV, kA);
     }
 
-    public void setUseRawVoltageSpeed(boolean set){
-        frontLeftModule.setUseRawVoltageSpeed(set);
-        frontRightModule.setUseRawVoltageSpeed(set);
-        backLeftModule.setUseRawVoltageSpeed(set);
-        backRightModule.setUseRawVoltageSpeed(set);
-    }
-
-    public void setTargetAngle(double targetAngle){
-        this.targetAngle = targetAngle;
-    }
-
+    /**
+     * Sets the robot target speed
+     * 
+     * @param speeds ChassisSpeeds object
+     */
     public void setSpeed(ChassisSpeeds speeds){
-        this.linearX = speeds.vx.value();
-        this.linearY = speeds.vy.value();
-        this.angular = speeds.omega.value();
+        linearX = speeds.vxMetersPerSecond;
+        linearY = speeds.vyMetersPerSecond;
+        angular = speeds.omegaRadiansPerSecond;
 
-        SwerveModuleState [], 4> desiredStates = kinematics.ToSwerveModulesStates(speeds);
+        SwerveModuleState[] desiredStates = kinematics.toSwerveModuleStates(speeds);
 
-        setModulesStates(desiredStates);
+        setModuleStates(desiredStates);
     }
 
-    public void setWheelVoltage(double voltage){
-        frontLeftModule.setWheelVoltage(voltage);
-        frontRightModule.setWheelVoltage(voltage);
-        backLeftModule.setWheelVoltage(voltage);
-        backRightModule.setWheelVoltage(voltage);
+    /**
+     * Returns the robot odometry
+     * 
+     * @return Pose2d object
+     */
+    public Pose2d getOdometry() {
+        return odometry.getEstimatedPosition();
     }
 
-    public void getOdometry(){
-        return odometry.GetEstimatedPosition();
+    /**
+     * Resets the robot odometry
+     * 
+     * @param initPose Pose2d object
+     */
+    public void resetOdometry(Pose2d initPose) {
+        odometry.resetPosition(new Rotation2d(-navx.getAngle()), getModulePosition(), initPose);
     }
 
-    public void resetOdometry(Pose2d initPose){
-        odometry.ResetPosition(Rotation2d.fromDegrees(navx.getAngle()), getModulePosition(), initPose);
-    }
-
-    double getHeadingRate(){
-        return -navx.GetRate();
-    }
-
-    final SwerveDriveKinematics<4>& getKinematics(){
+    /**
+     * Return the robot kinematics
+     * 
+     * @return SwerveDriveKinematics object
+     */
+    public SwerveDriveKinematics getKinematics() {
         return kinematics;
     }
 
-    public void addVisionMeasurement(Pose2d pose, second_t timestamp){
-        odometry.AddVisionMeasurement(pose, timestamp);
+    /**
+     * Updates odometry using vision
+     */
+    public void addVisionMeasurement(Pose2d pose, double timestamp){
+        odometry.addVisionMeasurement(pose, timestamp);
     }
 
-    public void resetNavx(double angle){
-        Pose2d.actualOdometry = getOdometry();
-        Pose2d.newOdometry{actualOdometry.X(), actualOdometry.Y(), degree_t(angle)};
+    /**
+     * Sets the navx to desired angle
+     * 
+     * @param angle Desired angle
+     */
+    public void resetNavx(double angle) {
+        Pose2d actualOdometry = getOdometry();
+        Pose2d newOdometry = new Pose2d(actualOdometry.getX(), actualOdometry.getY(), Rotation2d.fromDegrees(angle));
         resetOdometry(newOdometry);
     }
 
-    public void setModuleStates(SwerveModuleState[], 4> desiredStates){
-        frontLeftModule.setState(desiredStates[0]);
-        frontRightModule.setState(desiredStates[1]);
-        backRightModule.setState(desiredStates[2]);
-        backLeftModule.setState(desiredStates[3]);
+    /**
+     * Updates module states
+     * 
+     * @param desiredStates SwerveModuleStates array
+     */
+    public void setModuleStates(SwerveModuleState[] desiredStates){
+        m_frontLeftModule.setState(desiredStates[0]);
+        m_frontRightModule.setState(desiredStates[1]);
+        m_backLeftModule.setState(desiredStates[2]);
+        m_backRightModule.setState(desiredStates[3]);
 
-        backRightModule.setVoltages();
-        backLeftModule.setVoltages();
-        frontLeftModule.setVoltages();
-        frontRightModule.setVoltages();
+        m_backRightModule.setVoltages();
+        m_backLeftModule.setVoltages();
+        m_frontRightModule.setVoltages();
+        m_frontLeftModule.setVoltages();
     }
 
-    SwerveModuleState[], 4> getModuleStates(){
-        SwerveModuleState[], 4> modulePositions{
-            frontLeftModule.getState(),
-            frontRightModule.getState(),
-            backLeftModule.getState(),
-            backRightModule.getState()
+    /**
+     * Returns the module states
+     * 
+     * @return SwerveModuleState array
+     */
+    public SwerveModuleState[] getModuleStates() {
+        return new SwerveModuleState[] {
+            m_frontLeftModule.getState(),
+            m_frontRightModule.getState(),
+            m_backLeftModule.getState(),
+            m_backRightModule.getState()
         };
-        return modulePositions;
     }
 
-    SwerveModulePosition[], 4> getModulePosition(){
-        SwerveModulePosition[], 4> modulePositions{
-            frontLeftModule.getPosition(),
-            frontRightModule.getPosition(),
-            backLeftModule.getPosition(),
-            backRightModule.getPosition()
+    /**
+     * Returns the module positions
+     * 
+     * @return SwerveModulePosition array
+     */
+    public SwerveModulePosition[] getModulePosition(){
+        return new SwerveModulePosition[] {
+            m_frontLeftModule.getPosition(),
+            m_frontRightModule.getPosition(),
+            m_backLeftModule.getPosition(),
+            m_backRightModule.getPosition()
         };
-        return modulePositions;
     }
 
-    double getPitch(){
-        return navx.GetPitch();
+    /**
+     * Returns the robot pitch
+     * 
+     * @return double
+     */
+    public double getPitch() {
+        return navx.getPitch();
     }
 
-    double getYaw(){
-        return getOdometry().Rotation().Degrees().value();
+    /**
+     * Returns the robot yaw
+     * 
+     * @return double
+     */
+    public double getYaw() {
+        return getOdometry().getRotation().getDegrees();
     }
 
-    double getRoll(){
-        return navx.GetRoll();
+    /**
+     * Returns the robot roll
+     * 
+     * @return double
+     */
+    public double getRoll() {
+        return navx.getRoll();
     }
 
-    public void updateOdometry(){
-        odometry.Update(Rotation2d(degree_t(-navx.GetAngle())), getModulePosition());
+    /**
+     * Updates the robot odometry
+     */
+    public void updateOdometry() {
+        odometry.update(Rotation2d.fromDegrees(-navx.getAngle()), getModulePosition());
     }
 
-    public void shuffleboardPeriodic(){
-        Auto estimatedPos = getOdometry();
-        SmartDashboard.PutNumber("Roll", getRoll());
+    public void shuffleboardPeriodic() {
+       SmartDashboard.putNumber("LinearX", linearX);
+       SmartDashboard.putNumber("LinearY", linearY);
+       SmartDashboard.putNumber("Angular", angular);
 
-        SmartDashboard.PutNumber("OdometryX", estimatedPos.X().value());
-        SmartDashboard.PutNumber("OdometryY", estimatedPos.Y().value());
-        SmartDashboard.PutNumber("AnglenaveX", estimatedPos.Rotation().Degrees().value());
+        Pose2d estimatedPos = getOdometry();
+        SmartDashboard.putNumber("Roll", getRoll());
+
+        SmartDashboard.putNumber("OdometryX", estimatedPos.getX());
+        SmartDashboard.putNumber("OdometryY", estimatedPos.getY());
+        SmartDashboard.putNumber("AnglenaveX", estimatedPos.getRotation().getDegrees());
     }
 }
