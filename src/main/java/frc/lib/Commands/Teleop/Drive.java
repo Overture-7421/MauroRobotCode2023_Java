@@ -13,11 +13,11 @@ import frc.lib.math.Utils;
 import frc.lib.subsystems.SwerveChassis;
 
 public class Drive extends Command {
-  
+
   private SwerveChassis m_swerveChassis;
   private XboxController m_controller;
 
-  /* Speed Constants*/
+  /* Speed Constants */
   double kMaxSpeed = 5.0; // meters per second
   double kMaxAngularSpeed = 4.0; // radians per second
 
@@ -34,7 +34,7 @@ public class Drive extends Command {
   public Drive(SwerveChassis swerveChassis, XboxController controller) {
     this.m_swerveChassis = swerveChassis;
     this.m_controller = controller;
-    
+
     addRequirements(m_swerveChassis);
   }
 
@@ -63,11 +63,11 @@ public class Drive extends Command {
     double rInput = Utils.applyAxisFilter(m_controller.getRightX()) * kMaxAngularSpeed; // Radians per second
 
     ChassisSpeeds speeds = ChassisSpeeds.discretize(ChassisSpeeds.fromFieldRelativeSpeeds(
-      xLimiter.calculate(xInput),
-      yLimiter.calculate(yInput),
-      rLimiter.calculate(rInput),
-      m_swerveChassis.getOdometry().getRotation()),
-      0.02);
+        xLimiter.calculate(xInput),
+        yLimiter.calculate(yInput),
+        rLimiter.calculate(rInput),
+        m_swerveChassis.getOdometry().getRotation()),
+        0.02);
 
     m_swerveChassis.setSpeed(speeds);
   }
@@ -77,7 +77,7 @@ public class Drive extends Command {
   public void end(boolean interrupted) {
   }
 
-  // Returns true when the command should end 
+  // Returns true when the command should end
   @Override
   public boolean isFinished() {
     return false;

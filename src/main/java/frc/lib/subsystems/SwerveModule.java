@@ -15,18 +15,18 @@ import frc.lib.motorcontrollers.OverTalonFX;
 import frc.lib.sensors.OverCANCoder;
 
 public class SwerveModule extends SubsystemBase {
-  //Declaration of motors and sensors
+  // Declaration of motors and sensors
   private OverTalonFX m_driveMotor;
   private OverTalonFX m_turningMotor;
   private OverCANCoder m_CanCoder;
 
-  // Feedforward and Voltage
+  // Feedforward
   private SimpleMotorFeedforward m_FeedForward;
 
-  //State
+  // State
   private SwerveModuleState m_State = new SwerveModuleState();
 
-  //Ratios
+  // Ratios
   private double m_wheelDiameter = 1;
   private double m_driveMotorGearRatio = 1;
   private double m_turningMotorGearRatio = 1;
@@ -37,12 +37,12 @@ public class SwerveModule extends SubsystemBase {
   /**
    * Swerve Module Constructor
    * 
-   * @param rotatorID - ID of the motor that rotates the wheel
-   * @param wheelID - ID of the motor that drives the wheel
+   * @param rotatorID  - ID of the motor that rotates the wheel
+   * @param wheelID    - ID of the motor that drives the wheel
    * @param canCoderID - ID of the canCoder that is attached to the rotator
-   * @param offset - Offset of the canCoder
+   * @param offset     - Offset of the canCoder
    * @param moduleName - Name of the module
-   * @param canBus - Can Bus of the module
+   * @param canBus     - Can Bus of the module
    */
   public SwerveModule(int rotatorID, int wheelID, int canCoderID, double offset, String moduleName, String canBus) {
     m_driveMotor = new OverTalonFX(wheelID, ControllerNeutralMode.BRAKE, true, canBus);
@@ -206,11 +206,12 @@ public class SwerveModule extends SubsystemBase {
   };
 
   /**
-   * Sets the voltage of the module 
+   * Sets the voltage of the module
    */
   public void setVoltages() {
     m_turningMotor.setPositionVoltage(m_State.angle.getDegrees() / 360.0, false);
-    // m_driveMotor.setVoltage(m_Feedforward.calculate(m_State.speedMetersPerSecond), false);
+    // m_driveMotor.setVoltage(m_Feedforward.calculate(m_State.speedMetersPerSecond),
+    // false);
     m_driveMotor.setVoltage(setSpeed(m_State.speedMetersPerSecond), false);
 
   }
